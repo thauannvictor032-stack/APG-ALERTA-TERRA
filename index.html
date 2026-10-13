@@ -1,4 +1,364 @@
 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07111f">
+<title>APG Alerta Terra | Monitoramento Global</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root {
+  --bg:#07111f;
+  --panel:#101f32;
+  --border:#20364d;
+  --blue:#168cff;
+  --green:#20d9a0;
+  --red:#ff5267;
+  --yellow:#ffbf47;
+  --text:#e9f2ff;
+  --muted:#91a7c0;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:Arial,Helvetica,sans-serif;
+}
+header{
+  padding:20px 16px;background:#0b1829;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;
+}
+.brand{font-size:22px;font-weight:900;letter-spacing:1px}
+.brand span{color:var(--blue)}
+.subtitle{font-size:11px;color:var(--muted);margin-top:5px}
+.live{
+  color:var(--green);font-size:11px;font-weight:bold;
+  border:1px solid #205e53;border-radius:20px;padding:8px 10px;
+}
+.dot{display:inline-block;width:7px;height:7px;background:var(--green);
+border-radius:50%;margin-right:5px}
+main{max-width:1500px;margin:auto;padding:15px}
+.section-title{font-size:13px;color:var(--muted);margin:8px 0 12px}
+.stats{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
+}
+.card{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:12px;padding:15px;min-width:0;
+}
+.stat-label{font-size:11px;color:var(--muted);line-height:1.5}
+.stat-value{font-size:27px;font-weight:800;margin:9px 0}
+.stat-note{font-size:10px;color:var(--muted)}
+.blue{color:var(--blue)} .green{color:var(--green)}
+.red{color:var(--red)} .yellow{color:var(--yellow)}
+.layout{
+  display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);
+  gap:12px;margin-top:14px;
+}
+.panel-title{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:8px;flex-wrap:wrap;font-size:14px;font-weight:bold;
+  margin-bottom:12px;
+}
+#map{height:440px;width:100%;border-radius:8px;background:#091626}
+button{
+  border:1px solid var(--border);border-radius:7px;padding:9px 11px;
+  background:#152a41;color:var(--text);cursor:pointer;font-size:11px;
+}
+button:hover{border-color:var(--blue)}
+button.active{background:#124b7d;border-color:var(--blue)}
+.map-controls{display:flex;gap:6px;flex-wrap:wrap}
+.map-note{font-size:10px;color:var(--muted);line-height:1.6;margin-top:9px}
+#events{display:flex;flex-direction:column;gap:8px}
+.event{
+  background:#0b192a;border:1px solid var(--border);
+  border-left:3px solid var(--yellow);border-radius:8px;
+  padding:11px;font-size:12px;
+}
+.event.high{border-left-color:var(--red)}
+.event strong{font-size:13px}
+.event p{margin:6px 0;color:var(--muted);font-size:11px;line-height:1.5}
+.event small{color:var(--muted)}
+.badge{
+  display:inline-block;padding:4px 6px;border-radius:5px;
+  background:#20364d;font-size:10px;margin-top:5px;
+}
+.footer-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;
+}
+.row{
+  display:flex;justify-content:space-between;gap:10px;
+  border-bottom:1px solid var(--border);padding:10px 0;
+  font-size:12px;
+}
+.row:last-child{border:0}
+.row span:last-child{color:var(--muted);text-align:right}
+footer{
+  text-align:center;padding:24px 12px;color:var(--muted);
+  font-size:10px;line-height:1.8;
+}
+a{color:#64b7ff}
+#status{font-size:11px;color:var(--muted);margin-bottom:10px}
+@media(max-width:700px){
+  main{padding:10px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .stat-value{font-size:23px}
+  .layout{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr}
+  #map{height:350px}
+  .brand{font-size:19px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="brand"><span>APG</span> ALERTA TERRA</div>
+    <div class="subtitle">CENTRAL GLOBAL DE MONITORAMENTO DE EVENTOS SÍSMICOS</div>
+  </div>
+  <div class="live"><span class="dot"></span> SISTEMA ONLINE</div>
+</header>
+
+<main>
+  <div class="section-title">PAINEL OPERACIONAL · DADOS PÚBLICOS</div>
+
+  <section class="stats">
+    <div class="card">
+      <div class="stat-label">PAÍSES NA COBERTURA PRETENDIDA</div>
+      <div class="stat-value blue">195</div>
+      <div class="stat-note">Meta de cobertura mundial</div>
+    </div>
+    <div class="card">
+      <div class="stat-label">EVENTOS NO FEED</div>
+      <div class="stat-value yellow" id="eventCount">—</div>
+      <div class="stat-note">Últimas 24 horas · USGS</div>
+    </div>
+    <div class="card">
+      <div class="stat-label">MAGNITUDE MAIS ALTA</div>
+      <div class="stat-value red" id="maxMag">—</div>
+      <div class="stat-note">Entre os eventos carregados</div>
+    </div>
+    <div class="card">
+      <div class="stat-label">ÚLTIMA ATUALIZAÇÃO</div>
+      <div class="stat-value green" id="lastUpdate" style="font-size:19px">—</div>
+      <div class="stat-note">Horário local do dispositivo</div>
+    </div>
+  </section>
+
+  <section class="layout">
+    <div class="card">
+      <div class="panel-title">
+        <span>🌎 MAPA GLOBAL</span>
+        <div class="map-controls">
+          <button id="streetBtn" onclick="setMapLayer('street')">Mapa</button>
+          <button id="satBtn" class="active" onclick="setMapLayer('sat')">Satélite</button>
+        </div>
+      </div>
+      <div id="map"></div>
+      <div class="map-note">
+        Imagens cartográficas por satélite: podem não ser recentes nem ao vivo.
+        Os círculos representam terremotos publicados pelo USGS.
+        Toque em um marcador para ver os detalhes.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="panel-title">
+        <span>🚨 EVENTOS SÍSMICOS</span>
+        <button onclick="loadEarthquakes()">Atualizar</button>
+      </div>
+      <div id="status">Conectando ao feed público…</div>
+      <div id="events">Carregando eventos…</div>
+      <div style="margin-top:12px">
+        <a href="https://earthquake.usgs.gov/earthquakes/map/"
+           target="_blank" rel="noopener">Abrir mapa oficial do USGS ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="footer-grid">
+    <div class="card">
+      <div class="panel-title">📡 FONTES DE DADOS</div>
+      <div class="row"><span>Terremotos</span><span>USGS · Feed público</span></div>
+      <div class="row"><span>Mapa satélite</span><span>Esri · Camada cartográfica</span></div>
+      <div class="row"><span>Mapa de ruas</span><span>OpenStreetMap</span></div>
+      <div class="row"><span>Atualização</span><span>Automática a cada 5 min</span></div>
+    </div>
+    <div class="card">
+      <div class="panel-title">🌐 COBERTURA GLOBAL</div>
+      <div class="row"><span>Meta de países</span><span>195</span></div>
+      <div class="row"><span>Fonte sísmica integrada</span><span>USGS</span></div>
+      <div class="row"><span>Monitoramento nacional individual</span><span>Não integrado</span></div>
+      <div class="row"><span>Alertas oficiais de emergência</span><span>Consultar autoridades locais</span></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  APG ALERTA TERRA · PLATAFORMA INFORMATIVA INDEPENDENTE<br>
+  Não é um sistema oficial de defesa civil e não prevê terremotos.
+  A disponibilidade depende das fontes públicas e da conexão com a internet.<br>
+  Dados sísmicos: <a href="https://earthquake.usgs.gov/"
+  target="_blank" rel="noopener">USGS</a>.
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map('map', {worldCopyJump:true})
+  .setView([15, 0], 2);
+
+const layers = {
+  sat: L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {attribution:'Tiles © Esri', maxZoom:18}
+  ),
+  street: L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution:'© OpenStreetMap contributors', maxZoom:19}
+  )
+};
+
+let currentLayer = 'sat';
+layers.sat.addTo(map);
+const markers = L.layerGroup().addTo(map);
+
+function setMapLayer(type) {
+  if (layers[currentLayer]) map.removeLayer(layers[currentLayer]);
+  currentLayer = type;
+  layers[type].addTo(map);
+  document.getElementById('satBtn').classList.toggle('active',type==='sat');
+  document.getElementById('streetBtn').classList.toggle('active',type==='street');
+}
+
+function formatDate(timestamp) {
+  return new Date(timestamp).toLocaleString('pt-BR');
+}
+
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;',
+    '"':'&quot;', "'":'&#39;'
+  })[c]);
+}
+
+function magnitudeColor(mag) {
+  if (mag >= 5) return '#ff5267';
+  if (mag >= 3) return '#ffbf47';
+  return '#20d9a0';
+}
+
+function addEarthquake(feature) {
+  const p = feature.properties;
+  const coords = feature.geometry.coordinates;
+  const mag = Number(p.mag);
+  if (!Number.isFinite(mag)) return;
+
+  const radius = Math.max(4, Math.min(18, mag * 2.5));
+  const marker = L.circleMarker([coords[1], coords[0]], {
+    radius,
+    color: magnitudeColor(mag),
+    fillColor: magnitudeColor(mag),
+    fillOpacity: 0.75,
+    weight: 1
+  });
+
+  marker.bindPopup(
+    '<b>' + escapeHTML(p.place || 'Local não informado') + '</b><br>' +
+    'Magnitude: ' + mag.toFixed(1) + '<br>' +
+    'Profundidade: ' + Number(coords[2]).toFixed(1) + ' km<br>' +
+    'Horário: ' + escapeHTML(formatDate(p.time)) +
+    (p.url ? '<br><a target="_blank" rel="noopener" href="' +
+      escapeHTML(p.url) + '">Detalhes no USGS</a>' : '')
+  );
+  marker.addTo(markers);
+}
+
+async function loadEarthquakes() {
+  const status = document.getElementById('status');
+  status.textContent = 'Buscando dados públicos do USGS…';
+
+  try {
+    const response = await fetch(
+      'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson',
+      {cache:'no-store'}
+    );
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+
+    const data = await response.json();
+    const features = data.features || [];
+    markers.clearLayers();
+    features.forEach(addEarthquake);
+
+    document.getElementById('eventCount').textContent = features.length;
+
+    const mags = features
+      .map(f => Number(f.properties.mag))
+      .filter(Number.isFinite);
+
+    document.getElementById('maxMag').textContent =
+      mags.length ? Math.max(...mags).toFixed(1) : '—';
+
+    document.getElementById('lastUpdate').textContent =
+      new Date().toLocaleTimeString('pt-BR', {
+        hour:'2-digit', minute:'2-digit'
+      });
+
+    const list = document.getElementById('events');
+    list.innerHTML = '';
+
+    if (!features.length) {
+      list.textContent = 'Nenhum evento encontrado no feed atual.';
+    } else {
+      features.sort((a,b) =>
+        (b.properties.mag ?? -1) - (a.properties.mag ?? -1)
+      );
+
+      features.slice(0,12).forEach(f => {
+        const p = f.properties;
+        const mag = Number(p.mag);
+        const item = document.createElement('div');
+        item.className = 'event' + (mag >= 5 ? ' high' : '');
+        item.innerHTML =
+          '<strong class="' + (mag >= 5 ? 'red' : 'yellow') + '">' +
+          'M ' + (Number.isFinite(mag) ? mag.toFixed(1) : '—') +
+          '</strong><br>' +
+          '<span>' + escapeHTML(p.place || 'Local não informado') + '</span>' +
+          '<p>Horário: ' + escapeHTML(formatDate(p.time)) + '</p>' +
+          '<small>Profundidade: ' +
+          Number(f.geometry.coordinates[2]).toFixed(1) + ' km</small><br>' +
+          (p.url ? '<a href="' + escapeHTML(p.url) +
+          '" target="_blank" rel="noopener">Ver detalhes ↗</a>' : '');
+
+        item.style.cursor = 'pointer';
+        item.addEventListener('click', () => {
+          const c = f.geometry.coordinates;
+          map.setView([c[1],c[0]], Math.max(map.getZoom(),5));
+        });
+        list.appendChild(item);
+      });
+    }
+
+    status.textContent = 'Dados recebidos com sucesso · ' +
+      features.length + ' eventos nas últimas 24 horas.';
+  } catch (error) {
+    status.textContent =
+      'Não foi possível atualizar os dados. Verifique a internet e tente novamente.';
+    document.getElementById('events').innerHTML =
+      '<div class="event high">Feed indisponível no momento.' +
+      '<p>O mapa continua disponível. Tente atualizar mais tarde.</p>' +
+      '<a href="https://earthquake.usgs.gov/earthquakes/feed/" ' +
+      'target="_blank" rel="noopener">Consultar feeds oficiais ↗</a></div>';
+  }
+}
+
+loadEarthquakes();
+setInterval(loadEarthquakes, 5 * 60 * 1000);
+</script>
+</body>
+</html>
+
 
 <!DOCTYPE html>
 <html lang="pt-BR">
