@@ -1,1 +1,277 @@
-index.html 
+
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APG Alerta Terra | Monitoramento Global</title>
+<meta name="theme-color" content="#07111f">
+
+<link rel="stylesheet"
+ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+:root {
+  --bg:#07111f;
+  --panel:#101f32;
+  --border:#20364d;
+  --blue:#168cff;
+  --green:#20d9a0;
+  --red:#ff5267;
+  --text:#eef5ff;
+  --muted:#91a6bd;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,Helvetica,sans-serif;
+}
+header {
+  padding:22px 16px;
+  background:linear-gradient(120deg,#061a36,#0c3970);
+  border-bottom:1px solid #244d78;
+}
+.brand {
+  font-size:12px;
+  color:#64b6ff;
+  letter-spacing:3px;
+  font-weight:bold;
+}
+h1 { font-size:25px; margin:9px 0; }
+.subtitle { color:#b7c9df; font-size:13px; line-height:1.6; }
+.wrap { max-width:1100px; margin:auto; padding:16px; }
+.statusbar {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; flex-wrap:wrap; margin-bottom:15px;
+}
+.pill {
+  display:inline-flex; align-items:center; gap:7px;
+  border:1px solid var(--border); border-radius:30px;
+  padding:9px 12px; font-size:12px;
+  background:var(--panel);
+}
+.dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--green); display:inline-block;
+}
+.cards {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.card {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:13px; padding:15px; min-width:0;
+}
+.label {
+  font-size:11px; color:var(--muted);
+  text-transform:uppercase; letter-spacing:1px;
+}
+.number { font-size:28px; font-weight:bold; margin:10px 0 5px; }
+.small { color:var(--muted); font-size:12px; line-height:1.5; }
+.blue { color:#61b5ff; }
+.green { color:var(--green); }
+.red { color:var(--red); }
+.section-title { font-size:17px; margin:24px 0 12px; }
+.mapbox {
+  overflow:hidden; border:1px solid var(--border);
+  border-radius:14px; background:var(--panel);
+}
+.maphead {
+  padding:15px; display:flex; justify-content:space-between;
+  gap:12px; align-items:center; flex-wrap:wrap;
+}
+button {
+  border:1px solid #315477; border-radius:8px;
+  padding:10px 12px; background:#163453;
+  color:white; font-weight:bold; cursor:pointer;
+}
+button:active { opacity:.7; }
+#map { height:390px; width:100%; background:#0c1b2b; }
+.mapfoot {
+  padding:11px 14px; color:var(--muted);
+  font-size:11px; line-height:1.6;
+}
+.notice {
+  border-left:3px solid #f0b64c;
+  padding:12px; background:#292516;
+  color:#f7df9a; font-size:12px;
+  line-height:1.6; border-radius:4px;
+}
+.events { display:grid; gap:10px; }
+.event {
+  display:flex; gap:12px; padding:14px;
+  border-radius:10px; background:var(--panel);
+  border:1px solid var(--border);
+}
+.event-icon { font-size:22px; }
+.event h3 { font-size:14px; margin:0 0 6px; }
+.event p { font-size:12px; color:var(--muted); margin:0; line-height:1.5; }
+footer {
+  text-align:center; padding:25px 16px;
+  color:var(--muted); font-size:11px; line-height:1.8;
+}
+@media(min-width:650px) {
+  .cards { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  h1 { font-size:34px; }
+}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip {
+  background:#10243a; color:white;
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="brand">APG • GLOBAL INTELLIGENCE</div>
+  <h1>🌎 APG ALERTA TERRA</h1>
+  <div class="subtitle">
+    Painel global de observação ambiental e monitoramento terrestre
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="statusbar">
+    <div class="pill"><span class="dot"></span> PAINEL OPERACIONAL</div>
+    <div class="pill">🕒 <span id="clock">Carregando horário...</span></div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Cobertura planejada</div>
+      <div class="number blue">195</div>
+      <div class="small">Países na referência do painel; sem conexão individual confirmada.</div>
+    </div>
+    <div class="card">
+      <div class="label">Mapa global</div>
+      <div class="number green">ON</div>
+      <div class="small">Mapa interativo carregado pela internet.</div>
+    </div>
+    <div class="card">
+      <div class="label">Satélite</div>
+      <div class="number blue" style="font-size:22px">IMAGENS</div>
+      <div class="small">Visualização de imagens disponíveis, não vídeo ao vivo.</div>
+    </div>
+    <div class="card">
+      <div class="label">Alertas verificados</div>
+      <div class="number">0</div>
+      <div class="small">Nenhuma fonte de alerta real conectada ainda.</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">🛰️ Centro de observação terrestre</h2>
+  <div class="mapbox">
+    <div class="maphead">
+      <div>
+        <strong>Mapa mundial</strong>
+        <div class="small">Explore e aproxime as regiões</div>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button onclick="setMap('street')">Mapa</button>
+        <button onclick="setMap('satellite')">🛰️ Satélite</button>
+      </div>
+    </div>
+    <div id="map"></div>
+    <div class="mapfoot">
+      Camada de mapa ou imagens de satélite arquivadas/disponibilizadas
+      pelo provedor. A data de captura varia. © OpenStreetMap contributors
+      quando a camada de mapa é utilizada.
+    </div>
+  </div>
+
+  <h2 class="section-title">📡 Situação do sistema</h2>
+  <div class="notice">
+    <strong>Modo demonstrativo:</strong> este site ainda não recebe dados
+    sísmicos, vulcânicos, meteorológicos ou imagens de satélite em tempo
+    real. Não utilize este painel para decisões de emergência.
+  </div>
+
+  <h2 class="section-title">🌐 Módulos de monitoramento</h2>
+  <div class="events">
+    <div class="event">
+      <div class="event-icon">🌋</div>
+      <div>
+        <h3>Atividade vulcânica</h3>
+        <p>Aguardando integração com fontes oficiais de atividade vulcânica.</p>
+      </div>
+    </div>
+    <div class="event">
+      <div class="event-icon">🌎</div>
+      <div>
+        <h3>Terremotos e atividade sísmica</h3>
+        <p>Aguardando conexão com catálogos sísmicos oficiais.</p>
+      </div>
+    </div>
+    <div class="event">
+      <div class="event-icon">🌪️</div>
+      <div>
+        <h3>Clima e eventos extremos</h3>
+        <p>Aguardando integração com serviços meteorológicos.</p>
+      </div>
+    </div>
+    <div class="event">
+      <div class="event-icon">🛰️</div>
+      <div>
+        <h3>Observação por satélite</h3>
+        <p>Camadas visuais disponíveis no mapa. Não representam transmissão ao vivo.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <strong>APG ALERTA TERRA</strong><br>
+  Plataforma demonstrativa de observação global.<br>
+  Os dados precisam de fontes externas para serem validados.
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const clock = document.getElementById('clock');
+
+function updateClock() {
+  clock.textContent = new Date().toLocaleString('pt-BR', {
+    dateStyle:'short', timeStyle:'medium', timeZone:'UTC'
+  }) + ' UTC';
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+const map = L.map('map', {
+  worldCopyJump:true
+}).setView([10, 0], 2);
+
+const street = L.tileLayer(
+  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {
+    maxZoom:19,
+    attribution:'&copy; OpenStreetMap contributors'
+  }
+);
+
+const satellite = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {
+    maxZoom:18,
+    attribution:'Tiles &copy; Esri'
+  }
+);
+
+street.addTo(map);
+
+function setMap(type) {
+  if (type === 'satellite') {
+    map.removeLayer(street);
+    satellite.addTo(map);
+  } else {
+    map.removeLayer(satellite);
+    street.addTo(map);
+  }
+}
+
+window.setMap = setMap;
+</script>
+</body>
+</html>
